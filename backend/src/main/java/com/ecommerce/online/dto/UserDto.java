@@ -1,8 +1,9 @@
 package com.ecommerce.online.dto;
 
+import com.ecommerce.online.Entity.Role;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
 @Data
@@ -12,7 +13,7 @@ public class UserDto {
     private String name;
     private String email;
     private String password;
-    private String role;
+    private Role role;
     private String phone;
     private Boolean is_active;
     private LocalDateTime  created_at;

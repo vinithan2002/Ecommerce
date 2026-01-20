@@ -5,17 +5,29 @@ import com.ecommerce.online.Repository.UserRepository;
 import com.ecommerce.online.dto.UserDto;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
+import java.util.Optional;
+
+import static com.ecommerce.online.Entity.Role.USER;
 
 @Service
-@RequiredArgsConstructor
-public class UserServiceImpl implements UserService {
+//@RequiredArgsConstructor
+public class UserServiceImpl implements UserService, UserDetailsService {
 
-    private final UserRepository userRepository;
-    private final ModelMapper modelMapper;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private ModelMapper modelMapper;
+    @Autowired
+    private  PasswordEncoder passwordEncoder;
 
 
     public List<UserDto> getAllUsers()
@@ -38,10 +50,22 @@ public class UserServiceImpl implements UserService {
         return productDtoList;
     }
 
+    public UserDto getUserDetails(Long id)
+    {
+        Optional<User> user = userRepository.findById(id);
+        UserDto userDto = modelMapper.map(user,UserDto.class);
+        return userDto;
+    }
+
 
     public void createUser(UserDto userDto)
     {
+        if(userRepository.findByEmail(userDto.getEmail()).isPresent())
+        {
+            throw new RuntimeException("User Already Exist");
+        }
         User user = modelMapper.map(userDto, User.class);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
     }
 
@@ -56,7 +80,11 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id).get();
         user.setIsActive(false);
         userRepository.save(user);
-
     }
 
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        return userRepository.findByEmail(email)
+                .orElseThrow(()->new UsernameNotFoundException("User not found"));
+    }
 }

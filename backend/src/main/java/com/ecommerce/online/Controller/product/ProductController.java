@@ -6,25 +6,26 @@ import com.ecommerce.online.Service.product.ProductService;
 import com.ecommerce.online.dto.ProductDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.Cache;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 
 @RestController
 @RequiredArgsConstructor
 public class ProductController {
 
+    @Autowired
     private final ProductService productService;
 
     @Autowired
     CacheImpl cacheImpl;
 
-    @GetMapping("/products")
+
+    @GetMapping("/allProducts")
+    @PreAuthorize("hasAuthority('PRODUCT_READ')")
     public List<ProductDto> findProucts(
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Long minPrice,
@@ -40,27 +41,31 @@ public class ProductController {
     }
 
     @GetMapping("/products/{id}")
-    public ProductDto getProduct(@PathVariable Long id)
-    {
-//        return ResponseEntity.ok()
-//                .cacheControl(CacheControl.maxAge(10, TimeUnit.MINUTES).cachePublic())
-//                .body(productService.getProductById(id));
-        return productService.getProductById(id);
+    @PreAuthorize("hasAuthority('PRODUCT_READ')")
+    public ResponseEntity<ProductDto> getProduct(@PathVariable Long id) {
+
+        ProductDto product = productService.getProductById(id);
+
+        return ResponseEntity.ok()
+                .body(product);
     }
 
     @PostMapping("/products")
+    @PreAuthorize("hasAuthority('PRODUCT_POST')")
     public void createProduct(@RequestBody ProductDto productDto)
     {
         productService.createProduct(productDto);
     }
 
     @PutMapping ("/products")
+    @PreAuthorize("hasAuthority('PRODUCT_PUT')")
     public void updateProduct(@RequestBody ProductDto productDto)
     {
         productService.updateProduct(productDto);
     }
 
     @DeleteMapping("/products/{id}")
+    @PreAuthorize("hasAuthority('PRODUCT_DELETE')")
     public void deleteProduct(@PathVariable Long id)
     {
         productService.deleteProduct(id);

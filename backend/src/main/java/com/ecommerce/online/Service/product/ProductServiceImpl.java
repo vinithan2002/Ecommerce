@@ -3,8 +3,14 @@ package com.ecommerce.online.Service.product;
 import com.ecommerce.online.Entity.Product;
 import com.ecommerce.online.Repository.ProductRepository;
 import com.ecommerce.online.dto.ProductDto;
+import com.ecommerce.online.exception.ProductNotFoundException;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -13,13 +19,26 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final ModelMapper modelMapper;
+
+
+//    @PostConstruct
+//    public void init() throws Exception {
+//        System.out.println("After Property Set");
+//    }
+//
+//    @PreDestroy
+//    public void destroy() throws Exception {
+//        System.out.println("Destroyed");
+//    }
 
     public List<ProductDto> findProducts(Long categoryId, Long minPrice, Long maxPrice, String brand, Sort sort) {
 
@@ -41,10 +60,16 @@ public class ProductServiceImpl implements ProductService {
         return productDtoList;
     }
 
-    @Cacheable(value = "product", key = "#id")
+
+    //@Cacheable(value = "product", key = "#id")
     public ProductDto getProductById(Long id) {
-        Product product = productRepository.findByProductIdAndIsActiveTrue(id)
-                .orElseThrow(() -> new RuntimeException("product not found"));
+        System.out.println("inside method");
+        Product product = productRepository.findByProductIdAndIsActiveTrue(id);
+        if (product == null) {
+            throw new ProductNotFoundException(
+                    "Product not found with id: " + id
+            );
+        }
         return mapToDto(product);
     }
 
@@ -67,6 +92,7 @@ public class ProductServiceImpl implements ProductService {
         return productDto;
     }
 
+
     public void createProduct(ProductDto productDto)
     {
         Product product =  modelMapper.map(productDto, Product.class);
@@ -74,7 +100,8 @@ public class ProductServiceImpl implements ProductService {
     }
 
 
-   @CachePut(value = "product", key = "#id")
+   //@CachePut(value = "product", key = "#id")
+    @Transactional
     public void updateProduct(ProductDto productDto)
     {
         Product product =  modelMapper.map(productDto, Product.class);
