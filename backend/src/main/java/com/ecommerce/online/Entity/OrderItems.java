@@ -31,5 +31,13 @@ public class OrderItems {
 
 
     public OrderItems(Long orderId, Long productId, Integer quantity, BigDecimal price) {
+        this.orderId = orderId;
+        this.productId = productId;
+        this.quantity = quantity;
+        this.price = price;
+    }
+    public OrderItems()
+    {
+
     }
 }

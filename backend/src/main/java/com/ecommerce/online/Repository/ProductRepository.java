@@ -36,7 +36,7 @@ public interface ProductRepository extends JpaRepository<Product,Long>
             @Param("brand") String brand,
             Sort sort);
 
-    Optional<Product> findByProductIdAndIsActiveTrue(Long id);
+    Product findByProductIdAndIsActiveTrue(Long id);
 
     Product findAllByProductId(Long productId);
 }

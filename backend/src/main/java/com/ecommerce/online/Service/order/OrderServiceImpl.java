@@ -7,17 +7,19 @@ import com.ecommerce.online.Entity.OrderItems;
 import com.ecommerce.online.Repository.*;
 import com.ecommerce.online.dto.OrderDto;
 import com.ecommerce.online.dto.OrderItemsDto;
+import com.ecommerce.online.exception.OrderItemsNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
-import org.springframework.cache.Cache;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
 
+
+//@ConditionalOnProperty(name = "order.feature.enabled", havingValue = "false")
 @Service
 @RequiredArgsConstructor
+
 public class OrderServiceImpl implements OrderService{
 
     private final OrderRepository orderRepository;
@@ -27,11 +29,15 @@ public class OrderServiceImpl implements OrderService{
     private final CartItemsRepository cartItemsRepository;
 
     private final ModelMapper modelMapper;
-
-
     public List<OrderItemsDto> getOrderedItems(Long orderId)
     {
         List<OrderItems> orderItems = orderItemsRepository.findAllByOrderId(orderId);
+        //exception
+        if (orderItems == null || orderItems.isEmpty()) {
+            throw new OrderItemsNotFoundException(
+                    "No items found for orderId: " + orderId
+            );
+        }
         List<OrderItemsDto> orderItemsDtos = orderItems.stream()
                 .map(orderItem -> new OrderItemsDto(
                         orderItem.getId(),
@@ -65,30 +71,26 @@ public class OrderServiceImpl implements OrderService{
 
     public void placeOrder(Long userId) {
         Cart cart = cartRepository.findByCartId(userId);
-        Long cartId = cart.getCartId();
         Order order = new Order();
-        BigDecimal totalPrice = cartItemsRepository.sumOfAllPrice(cartId);
-        order.setCartId(Math.toIntExact(cartId));
+        BigDecimal totalPrice = cartItemsRepository.sumOfAllPrice(cart.getCartId());
+        order.setCartId(Math.toIntExact(cart.getCartId()));
         order.setUserId(userId);
         order.setTotolAmount(totalPrice);
+        Order placedOrder=orderRepository.save(order);
 
-        orderRepository.save(order);
-
-        Order order1 = orderRepository.findByCartId(cartId);
-        Long orderId = order1.getOrderId();
-
-        List<CartItems> cartItems = cartItemsRepository.findAllByCartId(cartId);
-
+        List<CartItems> cartItems = cartItemsRepository.findAllByCartId(cart.getCartId());
         List<OrderItems> orderItems = cartItems.stream()
                 .map(cartItem -> new OrderItems(
-                        orderId,
+                        placedOrder.getOrderId(),
                         cartItem.getProductId(),
                         cartItem.getQuantity(),
                         cartItem.getPrice()
                 ))
                 .toList();
-
         orderItemsRepository.saveAll(orderItems);
+
+        //to delete cart id in cart table
+        cartRepository.deleteByCartId(cart.getCartId());
 
     }
 }
